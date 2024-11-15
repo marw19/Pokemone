@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { FaHeartbeat, FaFistRaised, FaShieldAlt, FaBolt } from 'react-icons/fa'; // Importer des icônes
 
 interface Pokemon {
   name: string;
@@ -10,148 +11,144 @@ interface Pokemon {
   speed: number;
 }
 
-interface ListePokemoneProps {
-  searchQuery: string;
-  resetTrigger?: boolean; // Pour forcer le rechargement depuis l'extérieur
+interface PokemonResult {
+  name: string;
+  url: string;
 }
 
-const PokemonCard: React.FC<Pokemon> = React.memo(({ name, image, hp, attack, defense, speed }) => {
+const PokemonCard: React.FC<Pokemon> = ({ name, image, hp, attack, defense, speed }) => {
   return (
-    <div className="bg-white rounded-lg shadow-md flex flex-col items-center p-4">
-      <img src={image} alt={name} className="w-24 h-24 object-cover mb-4" />
-      <h2 className="text-lg font-semibold capitalize">{name}</h2>
-      <div className="mt-2 text-sm text-gray-700">
-        <p>HP: {hp}</p>
-        <p>Attack: {attack}</p>
-        <p>Defense: {defense}</p>
-        <p>Speed: {speed}</p>
+    <div className="bg-slate-100 rounded-lg shadow-md p-4 flex flex-col items-center transform transition-transform duration-500 hover:-rotate-3">
+      <div className="flex flex-col items-center mb-4">
+        <img src={image} alt={name} className="w-32 h-32 object-cover mb-2 transform transition-transform duration-300 hover:scale-150" />
+        <h2 className="text-2xl font-semibold capitalize text-blue-600">{name}</h2>
+      </div>
+      {/* Footer de la carte */}
+      <div className="w-full flex justify-around  pt-2 ">
+        <div className="flex items-center space-x-1">
+          <FaHeartbeat className="text-red-500 text-3xl" />
+          <span className='text-2xl text-blue-950'>{hp}</span>
+        </div>
+        <div className="flex items-center space-x-1">
+          <FaFistRaised className="text-yellow-500 text-3xl" />
+          <span className='text-2xl text-blue-950'>{attack}</span>
+        </div>
+        <div className="flex items-center space-x-1">
+          <FaShieldAlt className="text-blue-500 text-3xl" />
+          <span className='text-2xl text-blue-950'>{defense}</span>
+        </div>
+        <div className="flex items-center space-x-1">
+          <FaBolt className="text-green-500 text-3xl" />
+          <span className='text-2xl text-blue-950'>{speed}</span>
+        </div>
       </div>
     </div>
   );
-});
+};
 
-const ListePokemone: React.FC<ListePokemoneProps> = ({ searchQuery, resetTrigger }) => {
+const ListePokemone: React.FC = () => {
   const [pokemons, setPokemons] = useState<Pokemon[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pokemonPerPage = 12;
 
-  const cache = useRef<Record<number, Pokemon[]>>({}); // Cache des résultats
-
-  // Fetch Pokémon avec pagination et mise en cache
-  const fetchPokemons = async (page: number) => {
-    if (cache.current[page]) {
-      setPokemons(cache.current[page]);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      const offset = (page - 1) * pokemonPerPage;
-      const response = await axios.get(`https://pokeapi.co/api/v2/pokemon?limit=${pokemonPerPage}&offset=${offset}`);
-      const results = response.data.results;
-
-      const pokemonData = await Promise.all(
-        results.map(async (pokemon: { name: string; url: string }) => {
-          const { data } = await axios.get(pokemon.url);
-          const stats = data.stats;
-
-          return {
-            name: pokemon.name,
-            image: data.sprites.front_default || '',
-            hp: stats.find((stat: any) => stat.stat.name === 'hp')?.base_stat || 0,
-            attack: stats.find((stat: any) => stat.stat.name === 'attack')?.base_stat || 0,
-            defense: stats.find((stat: any) => stat.stat.name === 'defense')?.base_stat || 0,
-            speed: stats.find((stat: any) => stat.stat.name === 'speed')?.base_stat || 0,
-          };
-        })
-      );
-
-      cache.current[page] = pokemonData; // Mise en cache
-      setPokemons(pokemonData);
-    } catch (err) {
-      setError('Erreur lors de la récupération des Pokémon. Veuillez réessayer plus tard.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchPokemons(currentPage);
+    const fetchPokemons = async () => {
+      setLoading(true);
+      setError(null); // Réinitialiser l'état d'erreur
+      try {
+        const offset = (currentPage - 1) * pokemonPerPage;
+        const response = await axios.get(
+          `https://pokeapi.co/api/v2/pokemon?limit=${pokemonPerPage}&offset=${offset}`
+        );
+        const results: PokemonResult[] = response.data.results;
+
+        const pokemonData = await Promise.all(
+          results.map(async (pokemon) => {
+            const pokemonDetails = await axios.get(pokemon.url);
+            const stats = pokemonDetails.data.stats;
+
+            return {
+              name: pokemon.name,
+              image: pokemonDetails.data.sprites.front_default || 'https://via.placeholder.com/96', // Image par défaut
+              hp: stats.find((stat: any) => stat.stat.name === 'hp')?.base_stat || 0,
+              attack: stats.find((stat: any) => stat.stat.name === 'attack')?.base_stat || 0,
+              defense: stats.find((stat: any) => stat.stat.name === 'defense')?.base_stat || 0,
+              speed: stats.find((stat: any) => stat.stat.name === 'speed')?.base_stat || 0,
+            };
+          })
+        );
+
+        setPokemons(pokemonData);
+      } catch (err) {
+        setError('Une erreur est survenue lors du chargement des Pokémon. Veuillez réessayer.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPokemons();
   }, [currentPage]);
 
-  // Rechargement lors de la réinitialisation
-  useEffect(() => {
-    setCurrentPage(1); // Revient à la première page
-    cache.current = {}; // Réinitialise le cache
-    fetchPokemons(1); // Relance l'API
-  }, [resetTrigger]);
+  const handleNextPage = () => {
+    setCurrentPage((prevPage) => prevPage + 1);
+  };
 
-  const filteredPokemons = pokemons.filter((pokemon) =>
-    pokemon.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handlePrevPage = () => {
+    setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
+  };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600"></div>
-      </div>
-    );
+    return <div className="flex items-center justify-center h-screen bg-blue-100">
+    <div className="text-center">
+      <div className="text-6xl mb-4 animate-bounce">⏳</div>
+      <div className="text-xl font-semibold text-blue-600">Chargement des Pokémon...</div>
+    </div>
+  </div>;
   }
 
   if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-red-500">
-        <p className="text-lg font-semibold">{error}</p>
-      </div>
-    );
+    return <div className="text-center text-red-500">{error}</div>;
   }
 
   return (
-    <div className="mx-auto p-4 bg-blue-100 min-h-screen flex flex-col items-center justify-center">
-      {filteredPokemons.length === 0 ? (
-        <div className="flex flex-col items-center justify-center text-center">
-          <div className="text-6xl mb-4">😞</div>
-          <div className="text-2xl font-semibold text-gray-700">Aucun Pokémon trouvé</div>
+    <div className="bg-blue-100 min-h-screen">
+      <div className="container mx-auto p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
+          {pokemons.map((pokemon, index) => (
+            <PokemonCard
+              key={index}
+              name={pokemon.name}
+              image={pokemon.image}
+              hp={pokemon.hp}
+              attack={pokemon.attack}
+              defense={pokemon.defense}
+              speed={pokemon.speed}
+            />
+          ))}
         </div>
-      ) : (
-        <>
-          <div className="container grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
-            {filteredPokemons.map((pokemon, index) => (
-              <PokemonCard
-                key={index}
-                name={pokemon.name}
-                image={pokemon.image}
-                hp={pokemon.hp}
-                attack={pokemon.attack}
-                defense={pokemon.defense}
-                speed={pokemon.speed}
-              />
-            ))}
-          </div>
 
-          <div className="flex justify-center space-x-4 p-7">
-            <button
-              aria-label="Précédent"
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
-            >
-              Précédent
-            </button>
-            <span className="text-lg font-semibold">{currentPage}</span>
-            <button
-              aria-label="Suivant"
-              onClick={() => setCurrentPage((prev) => prev + 1)}
-              className="px-4 py-2 bg-blue-600 text-white rounded"
-            >
-              Suivant
-            </button>
-          </div>
-        </>
-      )}
+        {/* Pagination */}
+        <div className="flex justify-center space-x-4 p-6">
+          <button
+            onClick={handlePrevPage}
+            disabled={currentPage === 1}
+            className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+          >
+            Précédent
+          </button>
+          <span className="text-lg font-semibold text-blue-950">{currentPage}</span>
+          <button
+            onClick={handleNextPage}
+            disabled={pokemons.length < pokemonPerPage} // Désactiver si pas assez de Pokémon
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+          >
+            Suivant
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
