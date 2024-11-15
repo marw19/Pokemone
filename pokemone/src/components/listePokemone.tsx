@@ -89,7 +89,6 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
       setAllTypes(types as string[]); // Conversion explicite ici pour rassurer TypeScript
     }
   }, [data]);
-  
 
   useEffect(() => {
     if (searchTerm) {
@@ -130,6 +129,10 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
 
   const handlePageClick = (selectedItem: { selected: number }) => {
     setCurrentPage(selectedItem.selected);
+    window.scrollTo({
+      top: 0, // Remonter en haut de la page
+      behavior: "smooth", // Ajout d'un défilement fluide
+    });
   };
 
   const handleTypeChange = (selectedType: string) => {
@@ -175,7 +178,6 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
     <div className="bg-blue-100 min-h-screen">
       <div className="container mx-auto p-5">
         <div className="flex justify-end items-center mb-4 relative space-x-4">
-          {/* Affichage conditionnel du champ select à gauche du bouton */}
           {showDropdown && (
             <select
               className="p-2 border border-gray-300 rounded w-48 outline-none appearance-none"
@@ -190,8 +192,6 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
               ))}
             </select>
           )}
-
-          {/* Bouton de filtre */}
           <div className="relative">
             <button
               onClick={() => setShowFilter(!showFilter)}
@@ -201,7 +201,6 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
               <span className="ml-2">Filtre</span>
             </button>
 
-            {/* Affichage du menu des options */}
             {showFilter && (
               <div className="absolute right-0 mt-2 bg-white shadow-lg rounded-md p-4 w-80 z-10">
                 <ul>
@@ -256,7 +255,6 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
           </div>
         </div>
 
-        {/* Liste des Pokémon */}
         {filteredPokemons.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
             {currentPokemons.map((pokemon, index) => (
@@ -264,12 +262,12 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
                 key={index}
                 className="bg-slate-100 rounded-lg shadow-md p-4 flex flex-col items-center transform transition-transform duration-500 hover:-rotate-3"
               >
+                <h2 className="text-2xl font-bold capitalize text-blue-600 mb-4">{pokemon.name}</h2>
                 <img
                   src={pokemon.image}
                   alt={pokemon.name}
                   className="w-32 h-32 object-cover mb-2 transform transition-transform duration-300 hover:scale-150"
                 />
-                <h2 className="text-2xl font-semibold capitalize text-blue-600">{pokemon.name}</h2>
                 <div className="w-full flex justify-around pt-2">
                   <div className="flex items-center space-x-1">
                     <FaHeartbeat className="text-red-500 text-3xl" />
@@ -300,7 +298,6 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
           </div>
         )}
 
-        {/* Pagination */}
         {filteredPokemons.length > 0 && (
           <div className="flex justify-center mt-8">
             <ReactPaginate
