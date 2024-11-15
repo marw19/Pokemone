@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@apollo/client";
-import { GET_ALL_POKEMONS } from "../queries";
 import ReactPaginate from "react-paginate";
 import {
   FaHeartbeat,
@@ -10,7 +9,10 @@ import {
   FaFilter,
   FaSortAlphaUp,
   FaSortAlphaDown,
+  FaSort,
+  FaUndo,
 } from "react-icons/fa";
+import { GET_ALL_POKEMONS } from "../queries";
 
 interface Pokemon {
   name: string;
@@ -26,11 +28,12 @@ interface ListePokemoneProps {
 }
 
 const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
-  const [allPokemons, setAllPokemons] = useState<Pokemon[]>([]); // Tous les Pokémon
-  const [filteredPokemons, setFilteredPokemons] = useState<Pokemon[]>([]); // Pokémon filtrés
+  const [allPokemons, setAllPokemons] = useState<Pokemon[]>([]);
+  const [filteredPokemons, setFilteredPokemons] = useState<Pokemon[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [showFilter, setShowFilter] = useState(false);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
+  const [rangeValue, setRangeValue] = useState(50); // Valeur par défaut pour le filtre d'attaque
   const pokemonsPerPage = 12;
 
   const { loading, error, data } = useQuery(GET_ALL_POKEMONS, {
@@ -39,11 +42,6 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
       offset: 0,
     },
   });
-  const resetPokemons = () => {
-    setFilteredPokemons(allPokemons); // Rétablit les Pokémon d'origine
-    setSortOrder(null); // Supprime le tri
-    setCurrentPage(0); // Réinitialise la pagination
-  };
 
   useEffect(() => {
     if (data && data.pokemon_v2_pokemon) {
@@ -72,8 +70,8 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
         };
       });
 
-      setAllPokemons(allPokemons); // Stocke tous les Pokémon
-      setFilteredPokemons(allPokemons); // Initialise les Pokémon filtrés
+      setAllPokemons(allPokemons);
+      setFilteredPokemons(allPokemons);
     }
   }, [data]);
 
@@ -84,7 +82,7 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
       );
       setFilteredPokemons(filtered);
     } else {
-      setFilteredPokemons(allPokemons); // Réinitialise la liste si le champ est vide
+      setFilteredPokemons(allPokemons);
     }
     setCurrentPage(0);
   }, [searchTerm, allPokemons]);
@@ -95,6 +93,21 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
     );
     setFilteredPokemons(sorted);
     setSortOrder(order);
+  };
+
+  const resetPokemons = () => {
+    setFilteredPokemons(allPokemons);
+    setSortOrder(null);
+    setRangeValue(50); // Réinitialise le filtre d'attaque
+    setCurrentPage(0);
+  };
+
+  const handleRangeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setRangeValue(value);
+    const filtered = allPokemons.filter((pokemon) => pokemon.attack >= value);
+    setFilteredPokemons(filtered);
+    setCurrentPage(0); // Réinitialiser la pagination
   };
 
   const indexOfLastPokemon = (currentPage + 1) * pokemonsPerPage;
@@ -130,7 +143,7 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
   return (
     <div className="bg-blue-100 min-h-screen">
       <div className="container mx-auto p-5">
-        {/* Bouton de tri */}
+        {/* Boutons de filtre */}
         <div className="flex justify-end items-center mb-4 relative">
           <button
             onClick={() => setShowFilter(!showFilter)}
@@ -140,7 +153,7 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
           </button>
 
           {showFilter && (
-            <div className="bg-white shadow-lg rounded-md absolute top-10 right-0 p-2 w-40 z-10">
+            <div className="bg-white shadow-lg rounded-md absolute top-10 right-0 p-4 w-60 z-10">
               <ul>
                 <li
                   className="flex items-center py-2 cursor-pointer hover:bg-gray-200"
@@ -156,16 +169,31 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
                   <FaSortAlphaDown className="mr-2 text-gray-600" />
                   Trier Z-A
                 </li>
-                <li
+                <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Valeur d'attaque
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  step="10"
+                  value={rangeValue}
+                  onChange={handleRangeChange}
+                  className="w-full"
+                />
+              </div>
+              <li
                   className="flex items-center py-2 cursor-pointer hover:bg-gray-200"
                   onClick={resetPokemons}
                 >
-                  <FaFilter className="mr-2 text-gray-600" />
+                  <FaUndo className="mr-2 text-gray-600" />
                   Réinitialiser
                 </li>
               </ul>
-            </div>
+              {/* Input range pour l'attaque */}
 
+            </div>
           )}
         </div>
 
@@ -187,14 +215,12 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
                 key={index}
                 className="bg-slate-100 rounded-lg shadow-md p-4 flex flex-col items-center transform transition-transform duration-500 hover:-rotate-3"
               >
-                <div className="flex flex-col items-center mb-4">
-                  <img
-                    src={pokemon.image}
-                    alt={pokemon.name}
-                    className="w-32 h-32 object-cover mb-2 transform transition-transform duration-300 hover:scale-150"
-                  />
-                  <h2 className="text-2xl font-semibold capitalize text-blue-600">{pokemon.name}</h2>
-                </div>
+                <img
+                  src={pokemon.image}
+                  alt={pokemon.name}
+                  className="w-32 h-32 object-cover mb-2 transform transition-transform duration-300 hover:scale-150"
+                />
+                <h2 className="text-2xl font-semibold capitalize text-blue-600">{pokemon.name}</h2>
                 <div className="w-full flex justify-around pt-2">
                   <div className="flex items-center space-x-1">
                     <FaHeartbeat className="text-red-500 text-3xl" />
