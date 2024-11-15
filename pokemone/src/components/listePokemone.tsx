@@ -9,7 +9,6 @@ import {
   FaFilter,
   FaSortAlphaUp,
   FaSortAlphaDown,
-  FaSort,
   FaUndo,
 } from "react-icons/fa";
 import { GET_ALL_POKEMONS } from "../queries";
@@ -33,7 +32,9 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [showFilter, setShowFilter] = useState(false);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
-  const [rangeValue, setRangeValue] = useState(50); // Valeur par défaut pour le filtre d'attaque
+  const [rangeValue, setRangeValue] = useState(50);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedOption, setSelectedOption] = useState("");
   const pokemonsPerPage = 12;
 
   const { loading, error, data } = useQuery(GET_ALL_POKEMONS, {
@@ -98,7 +99,8 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
   const resetPokemons = () => {
     setFilteredPokemons(allPokemons);
     setSortOrder(null);
-    setRangeValue(50); // Réinitialise le filtre d'attaque
+    setRangeValue(50);
+    setSelectedOption("");
     setCurrentPage(0);
   };
 
@@ -107,16 +109,16 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
     setRangeValue(value);
     const filtered = allPokemons.filter((pokemon) => pokemon.attack >= value);
     setFilteredPokemons(filtered);
-    setCurrentPage(0); // Réinitialiser la pagination
+    setCurrentPage(0);
+  };
+
+  const handlePageClick = (selectedItem: { selected: number }) => {
+    setCurrentPage(selectedItem.selected);
   };
 
   const indexOfLastPokemon = (currentPage + 1) * pokemonsPerPage;
   const indexOfFirstPokemon = indexOfLastPokemon - pokemonsPerPage;
   const currentPokemons = filteredPokemons.slice(indexOfFirstPokemon, indexOfLastPokemon);
-
-  const handlePageClick = (selectedItem: { selected: number }) => {
-    setCurrentPage(selectedItem.selected);
-  };
 
   if (loading) {
     return (
@@ -143,72 +145,86 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
   return (
     <div className="bg-blue-100 min-h-screen">
       <div className="container mx-auto p-5">
-        {/* Boutons de filtre */}
-        <div className="flex justify-end items-center mb-4 relative">
-          <button
-            onClick={() => setShowFilter(!showFilter)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-full flex items-center"
-          >
-            <FaFilter className="text-white text-xl" />
-          </button>
-
-          {showFilter && (
-            <div className="bg-white shadow-lg rounded-md absolute top-10 right-0 p-4 w-60 z-10">
-              <ul>
-                <li
-                  className="flex items-center py-2 cursor-pointer hover:bg-gray-200"
-                  onClick={() => sortPokemons("asc")}
-                >
-                  <FaSortAlphaUp className="mr-2 text-gray-600" />
-                  Trier A-Z
-                </li>
-                <li
-                  className="flex items-center py-2 cursor-pointer hover:bg-gray-200"
-                  onClick={() => sortPokemons("desc")}
-                >
-                  <FaSortAlphaDown className="mr-2 text-gray-600" />
-                  Trier Z-A
-                </li>
-                <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Valeur d'attaque
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="200"
-                  step="10"
-                  value={rangeValue}
-                  onChange={handleRangeChange}
-                  className="w-full"
-                />
-              </div>
-              <li
-                  className="flex items-center py-2 cursor-pointer hover:bg-gray-200"
-                  onClick={resetPokemons}
-                >
-                  <FaUndo className="mr-2 text-gray-600" />
-                  Réinitialiser
-                </li>
-              </ul>
-              {/* Input range pour l'attaque */}
-
-            </div>
+        <div className="flex justify-end items-center mb-4 relative space-x-4">
+          {/* Affichage conditionnel du champ select à gauche du bouton */}
+          {showDropdown && (
+            <select
+              className="p-2 border border-gray-300 rounded w-48 outline-none appearance-none"
+              value={selectedOption}
+              onChange={(e) => setSelectedOption(e.target.value)}
+            >
+              <option value="">Types</option>
+              <option value="option1">Option 1</option>
+              <option value="option2">Option 2</option>
+              <option value="option3">Option 3</option>
+            </select>
           )}
+
+          {/* Bouton de filtre */}
+          <div className="relative">
+            <button
+              onClick={() => setShowFilter(!showFilter)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-full flex items-center"
+            >
+              <FaFilter className="text-white text-xl" />
+              <span className="ml-2">Filtre</span>
+            </button>
+            {showFilter && (
+              <div className="absolute right-0 mt-2 bg-white shadow-lg rounded-md p-4 w-80 z-10">
+                <ul>
+                  <li
+                    className="flex items-center py-2 cursor-pointer hover:bg-gray-200"
+                    onClick={() => sortPokemons("asc")}
+                  >
+                    <FaSortAlphaUp className="mr-2 text-gray-600" />
+                    Trier A-Z
+                  </li>
+                  <li
+                    className="flex items-center py-2 cursor-pointer hover:bg-gray-200"
+                    onClick={() => sortPokemons("desc")}
+                  >
+                    <FaSortAlphaDown className="mr-2 text-gray-600" />
+                    Trier Z-A
+                  </li>
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                      <FaFistRaised className="mr-2 text-xl" />
+                      Valeur d'attaque
+                    </label>
+                    <input
+                      type="range"
+                      min="49"
+                      max="190"
+                      step="1"
+                      value={rangeValue}
+                      onChange={handleRangeChange}
+                      className="w-full"
+                    />
+                  </div>
+                  <li className="flex items-center py-2">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded mr-2"
+                      checked={showDropdown}
+                      onChange={(e) => setShowDropdown(e.target.checked)}
+                    />
+                    <span className="text-sm text-gray-700">Types</span>
+                  </li>
+                  <li
+                    className="flex items-center py-2 cursor-pointer hover:bg-gray-200"
+                    onClick={resetPokemons}
+                  >
+                    <FaUndo className="mr-2 text-gray-600" />
+                    Réinitialiser les filtres
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Aucun Pokémon trouvé */}
-        {filteredPokemons.length === 0 && !loading && (
-          <div className="flex items-center justify-center h-screen bg-blue-100">
-            <div className="text-center">
-              <div className="text-6xl mb-4 animate-bounce">😞</div>
-              <div className="text-xl font-semibold text-blue-600">Aucun Pokémon trouvé...</div>
-            </div>
-          </div>
-        )}
-
-        {/* Cartes Pokémon */}
-        {filteredPokemons.length > 0 && (
+        {/* Liste des Pokémon */}
+        {filteredPokemons.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
             {currentPokemons.map((pokemon, index) => (
               <div
@@ -242,6 +258,13 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
               </div>
             ))}
           </div>
+        ) : (
+          <div className="flex items-center justify-center h-screen bg-blue-100">
+          <div className="text-center">
+            <div className="text-6xl mb-4 animate-bounce">😞</div>
+            <div className="text-2xl font-semibold text-blue-600">Aucun pokémone n'est trouvé...</div>
+          </div>
+        </div>
         )}
 
         {/* Pagination */}
