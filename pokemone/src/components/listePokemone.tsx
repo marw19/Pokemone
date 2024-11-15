@@ -20,6 +20,7 @@ interface Pokemon {
   attack: number;
   defense: number;
   speed: number;
+  types: string[];
 }
 
 interface ListePokemoneProps {
@@ -29,6 +30,7 @@ interface ListePokemoneProps {
 const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
   const [allPokemons, setAllPokemons] = useState<Pokemon[]>([]);
   const [filteredPokemons, setFilteredPokemons] = useState<Pokemon[]>([]);
+  const [allTypes, setAllTypes] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [showFilter, setShowFilter] = useState(false);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>(null);
@@ -46,21 +48,25 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
 
   useEffect(() => {
     if (data && data.pokemon_v2_pokemon) {
-      const allPokemons = data.pokemon_v2_pokemon.map((pokemon: any) => {
+      const allPokemons: Pokemon[] = data.pokemon_v2_pokemon.map((pokemon: any) => {
         const stats = pokemon.pokemon_v2_pokemonstats.reduce(
-          (acc: any, stat: any) => ({
+          (acc: Record<string, number>, stat: any) => ({
             ...acc,
             [stat.pokemon_v2_stat.name]: stat.base_stat,
           }),
           {}
         );
-
+  
         const spriteData = pokemon.pokemon_v2_pokemonsprites[0]?.sprites;
         const frontDefault =
           typeof spriteData === "string"
             ? JSON.parse(spriteData)?.front_default
             : spriteData?.front_default;
-
+  
+        const types: string[] = pokemon.pokemon_v2_pokemontypes.map(
+          (type: any) => type.pokemon_v2_type.name
+        );
+  
         return {
           name: pokemon.name,
           image: frontDefault || "https://via.placeholder.com/96",
@@ -68,13 +74,22 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
           attack: stats.attack || 0,
           defense: stats.defense || 0,
           speed: stats.speed || 0,
+          types,
         };
       });
-
+  
       setAllPokemons(allPokemons);
       setFilteredPokemons(allPokemons);
+  
+      const types = [
+        ...new Set(
+          allPokemons.flatMap((pokemon) => pokemon.types as string[]) // Typage explicite ici
+        ),
+      ];
+      setAllTypes(types as string[]); // Conversion explicite ici pour rassurer TypeScript
     }
   }, [data]);
+  
 
   useEffect(() => {
     if (searchTerm) {
@@ -101,6 +116,7 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
     setSortOrder(null);
     setRangeValue(50);
     setSelectedOption("");
+    setShowDropdown(false);
     setCurrentPage(0);
   };
 
@@ -114,6 +130,19 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
 
   const handlePageClick = (selectedItem: { selected: number }) => {
     setCurrentPage(selectedItem.selected);
+  };
+
+  const handleTypeChange = (selectedType: string) => {
+    setSelectedOption(selectedType);
+    if (selectedType) {
+      const filtered = allPokemons.filter((pokemon) =>
+        pokemon.types.includes(selectedType)
+      );
+      setFilteredPokemons(filtered);
+    } else {
+      setFilteredPokemons(allPokemons);
+    }
+    setCurrentPage(0);
   };
 
   const indexOfLastPokemon = (currentPage + 1) * pokemonsPerPage;
@@ -151,12 +180,14 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
             <select
               className="p-2 border border-gray-300 rounded w-48 outline-none appearance-none"
               value={selectedOption}
-              onChange={(e) => setSelectedOption(e.target.value)}
+              onChange={(e) => handleTypeChange(e.target.value)}
             >
               <option value="">Types</option>
-              <option value="option1">Option 1</option>
-              <option value="option2">Option 2</option>
-              <option value="option3">Option 3</option>
+              {allTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
             </select>
           )}
 
@@ -169,6 +200,8 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
               <FaFilter className="text-white text-xl" />
               <span className="ml-2">Filtre</span>
             </button>
+
+            {/* Affichage du menu des options */}
             {showFilter && (
               <div className="absolute right-0 mt-2 bg-white shadow-lg rounded-md p-4 w-80 z-10">
                 <ul>
@@ -260,11 +293,11 @@ const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
           </div>
         ) : (
           <div className="flex items-center justify-center h-screen bg-blue-100">
-          <div className="text-center">
-            <div className="text-6xl mb-4 animate-bounce">😞</div>
-            <div className="text-2xl font-semibold text-blue-600">Aucun pokémone n'est trouvé...</div>
+            <div className="text-center">
+              <div className="text-6xl mb-4 animate-bounce">😞</div>
+              <div className="text-2xl font-semibold text-blue-600">Aucun Pokémon trouvé...</div>
+            </div>
           </div>
-        </div>
         )}
 
         {/* Pagination */}
