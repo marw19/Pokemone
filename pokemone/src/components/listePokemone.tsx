@@ -12,6 +12,10 @@ interface Pokemon {
   speed: number;
 }
 
+interface ListePokemoneProps {
+  searchTerm: string; // Recevoir le terme de recherche en prop
+}
+
 const PokemonCard: React.FC<Pokemon> = ({ name, image, hp, attack, defense, speed }) => {
   return (
     <div className="bg-slate-100 rounded-lg shadow-md p-4 flex flex-col items-center transform transition-transform duration-500 hover:-rotate-3">
@@ -45,8 +49,9 @@ const PokemonCard: React.FC<Pokemon> = ({ name, image, hp, attack, defense, spee
   );
 };
 
-const ListePokemone: React.FC = () => {
+const ListePokemone: React.FC<ListePokemoneProps> = ({ searchTerm }) => {
   const [allPokemons, setAllPokemons] = useState<Pokemon[]>([]); // Tous les Pokémon
+  const [filteredPokemons, setFilteredPokemons] = useState<Pokemon[]>([]); // Pokémon filtrés par nom
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
@@ -83,6 +88,7 @@ const ListePokemone: React.FC = () => {
       );
 
       setAllPokemons(allPokemonDetails); // Stocker tous les Pokémon
+      setFilteredPokemons(allPokemonDetails); // Initialiser les Pokémon filtrés
     } catch (err) {
       if (retryCount > 0) {
         console.warn(`Retrying... (${3 - retryCount + 1})`);
@@ -100,10 +106,23 @@ const ListePokemone: React.FC = () => {
     fetchAllPokemons();
   }, []);
 
+  useEffect(() => {
+    // Filtrage des Pokémon basé sur le terme de recherche
+    if (searchTerm) {
+      const filtered = allPokemons.filter(pokemon =>
+        pokemon.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredPokemons(filtered);
+    } else {
+      setFilteredPokemons(allPokemons);
+    }
+    setCurrentPage(0); // Réinitialiser la page lorsque la recherche change
+  }, [searchTerm, allPokemons]); // Exécuter cette logique chaque fois que le terme de recherche change
+
   // Gestion de la pagination locale
   const indexOfLastPokemon = (currentPage + 1) * pokemonsPerPage;
   const indexOfFirstPokemon = indexOfLastPokemon - pokemonsPerPage;
-  const currentPokemons = allPokemons.slice(indexOfFirstPokemon, indexOfLastPokemon);
+  const currentPokemons = filteredPokemons.slice(indexOfFirstPokemon, indexOfLastPokemon);
 
   // Gestion du changement de page
   const handlePageClick = (selectedItem: { selected: number }) => {
@@ -141,38 +160,50 @@ const ListePokemone: React.FC = () => {
   return (
     <div className="bg-blue-100 min-h-screen">
       <div className="container mx-auto p-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
-          {currentPokemons.map((pokemon, index) => (
-            <PokemonCard
-              key={index}
-              name={pokemon.name}
-              image={pokemon.image}
-              hp={pokemon.hp}
-              attack={pokemon.attack}
-              defense={pokemon.defense}
-              speed={pokemon.speed}
-            />
-          ))}
-        </div>
+        {/* Affichage du message si aucun Pokémon n'est trouvé */}
+        {filteredPokemons.length === 0 ? (
+           <div className="flex items-center justify-center h-screen bg-blue-100">
+           <div className="text-center">
+             <div className="text-6xl mb-4 animate-bounce">😞</div>
+             <div className="text-xl font-semibold text-blue-600">Aucun pokémone trouvé...</div>
+           </div>
+         </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
+            {currentPokemons.map((pokemon, index) => (
+              <PokemonCard
+                key={index}
+                name={pokemon.name}
+                image={pokemon.image}
+                hp={pokemon.hp}
+                attack={pokemon.attack}
+                defense={pokemon.defense}
+                speed={pokemon.speed}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Pagination */}
-        <div className="flex justify-center mt-8">
-          <ReactPaginate
-            previousLabel="Précédent"
-            nextLabel="Suivant"
-            breakLabel="..."
-            pageCount={Math.ceil(allPokemons.length / pokemonsPerPage)} // Nombre total de pages
-            marginPagesDisplayed={2}
-            pageRangeDisplayed={3}
-            onPageChange={handlePageClick} // Appelé lors du changement de page
-            containerClassName="flex items-center space-x-2"
-            pageClassName="px-4 py-2 border rounded"
-            activeClassName="bg-blue-600 text-white"
-            previousClassName="px-4 py-2 border rounded"
-            nextClassName="px-4 py-2 border rounded"
-            disabledClassName="opacity-50 cursor-not-allowed"
-          />
-        </div>
+        {filteredPokemons.length > 0 && (
+          <div className="flex justify-center mt-8">
+            <ReactPaginate
+              previousLabel="Précédent"
+              nextLabel="Suivant"
+              breakLabel="..."
+              pageCount={Math.ceil(filteredPokemons.length / pokemonsPerPage)} // Utiliser les Pokémon filtrés
+              marginPagesDisplayed={2}
+              pageRangeDisplayed={3}
+              onPageChange={handlePageClick} // Appelé lors du changement de page
+              containerClassName="flex items-center space-x-2"
+              pageClassName="px-4 py-2 border rounded"
+              activeClassName="bg-blue-600 text-white"
+              previousClassName="px-4 py-2 border rounded"
+              nextClassName="px-4 py-2 border rounded"
+              disabledClassName="opacity-50 cursor-not-allowed"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
